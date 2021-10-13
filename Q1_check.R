@@ -3,17 +3,15 @@ library(ggplot2)
 setwd('C:/Users/morey/Documents/R_Projects/quarter_rankings/')
 
 sjr <- read.csv(file = 'scimagojr 2020.csv', sep = ';', na.strings = '-')
+sjr$Title <- toupper(sjr$Title)
+
 jcr <- read.csv(file = 'wos-jcr 2021-June-30.csv')  
-rec <- read.csv('gelfan.txt', fileEncoding = 'UTF-8', fill = F, allowEscapes = F,
+rec <- read.csv('tananaev.csv', fileEncoding = 'UTF-8', fill = F, allowEscapes = F,
                 header = TRUE, stringsAsFactors = FALSE, check.names = F)
-library(RefManageR)
-rec <- ReadBib('gelfan.bib', .Encoding = "UTF-8", check = F)
-results.list <- lapply(strsplit(readLines(con = "gelfan.txt", encoding = "UTF-8"), 
-                                split = ",", fixed = T), as.character)
-df <- do.call(rbind, results.list[-1])
-
-
-df <- merge(rec[,c(1, 3, 4, 5, 13)], sjr[, c(3, 7)], by.x ='Название источника', by.y = 'Title')
+library(bibliometrix)
+rec <- bibliometrix::convert2df(file = 'gelfan.bib', dbsource = "scopus", format = "bibtex")
+rownames(rec) <- NULL
+df <- merge(rec[,c(1, 4, 5, 10, 13)], sjr[, c(3, 7)], by.x ='SO', by.y = 'Title', all.x = T)
 
 
 sum(df$SJR.Best.Quartile == 'Q1', na.rm = T)
@@ -25,7 +23,7 @@ df %>%
 ggplot(df, aes(x=SJR.Best.Quartile, fill=SJR.Best.Quartile)) + 
   geom_histogram(stat = 'count') + 
   stat_count(aes(y=..count..,label=..count..),geom="text",vjust=-1) +
-  labs(title = paste('SCIMAGO JR ', min(rec$Год), '-', max(rec$Год)), x='Квартиль', y='Количество',
+  labs(title = paste('SCIMAGO JR ', min(rec$PY), '-', max(rec$PY)), x='Квартиль', y='Количество',
        fill='Квартиль') 
 
 sud <- read.csv('sudheer2016-2021.csv', fileEncoding = 'UTF-8', 
