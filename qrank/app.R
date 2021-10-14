@@ -48,16 +48,18 @@ server <- function(input, output, session) {
         
         rec <- bibliometrix::convert2df(inFile$datapath, dbsource = "scopus", format = "bibtex")
         rownames(rec) <- NULL
-        df <- merge(rec[,c(1, 4, 5, 10, 13)], sjr[, c(3, 7)], by.x ='SO', by.y = 'Title', all.x = T)
-        df <- df[order(df$PY, decreasing = T),]
-        rownames(df) <- NULL
-        print(colnames(df))
-        colnames(df) <- c('Журнал', 'Авторы', 'DOI', 'Название', 'Год', 'Квартиль')
-        # print(summary(df))
+        df <- rec %>% 
+          dplyr::select(SO, AU, PY, DI, TI) %>%
+          dplyr::left_join(y = sjr, by = c("SO"="Title")) %>%
+          dplyr::select(PY,AU,TI,SO,DI,SJR.Best.Quartile) %>%
+          `colnames<-`(c('Год','Авторы','Название','Журнал','DOI','Квартиль'))  %>%
+          dplyr::arrange(desc(`Год`))
         return(df)
     })
     
     output$table <- DT::renderDataTable(
+      if (is.null(outTable))
+        return(NULL),
         outTable(),
         options = list(
             language = list(url = "https://cdn.datatables.net/plug-ins/1.11.3/i18n/ru.json")
@@ -65,6 +67,8 @@ server <- function(input, output, session) {
         )
     
     output$plot <- renderPlot({
+      if (is.null(outTable))
+        return(NULL)
         df <- outTable()
         ggplot(df, aes(x=`Квартиль`, fill=`Квартиль`)) +
             geom_histogram(stat = 'count') +
@@ -75,6 +79,8 @@ server <- function(input, output, session) {
                  fill='Квартиль') + theme_minimal(base_size = 20)
     })
     output$count <- renderTable({
+      if (is.null(outTable))
+        return(NULL)
         df <- outTable()
         df %>%
             dplyr::group_by(df$`Квартиль`) %>%

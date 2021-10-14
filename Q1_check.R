@@ -1,21 +1,30 @@
 Sys.setlocale("LC_ALL","Russian")
 library(ggplot2)
+library(dplyr)
+library(bibliometrix)
 setwd('C:/Users/morey/Documents/R_Projects/quarter_rankings/')
 
-sjr <- read.csv(file = 'scimagojr 2020.csv', sep = ';', na.strings = '-')
+sjr <- read.csv(file = 'd:/YandexDisk/ИВПРАН/РНФ/заявки/2021/63/sjr/scimagojr 2020.csv', sep = ';', na.strings = '-')
 sjr$Title <- toupper(sjr$Title)
 
 jcr <- read.csv(file = 'wos-jcr 2021-June-30.csv')  
 rec <- read.csv('tananaev.csv', fileEncoding = 'UTF-8', fill = F, allowEscapes = F,
                 header = TRUE, stringsAsFactors = FALSE, check.names = F)
-library(bibliometrix)
-rec <- bibliometrix::convert2df(file = 'gelfan.bib', dbsource = "scopus", format = "bibtex")
+
+rec <- bibliometrix::convert2df(file = 'd:/YandexDisk/ИВПРАН/РНФ/заявки/2021/63/sjr/moreydo.bib', dbsource = "scopus", format = "bibtex")
 rownames(rec) <- NULL
+df <- rec %>% 
+  dplyr::select(SO, AU, PY, DI, TI) %>%
+  dplyr::left_join(y = sjr, by = c("SO"="Title")) %>%
+  dplyr::select(PY,AU,TI,SO,DI,SJR.Best.Quartile) %>%
+  `colnames<-`(c('Год','Авторы','Название','Журнал','DOI','Квартиль'))  %>%
+  dplyr::arrange(desc(`Год`))
+
 df <- merge(rec[,c(1, 4, 5, 10, 13)], sjr[, c(3, 7)], by.x ='SO', by.y = 'Title', all.x = T)
 
 
 sum(df$SJR.Best.Quartile == 'Q1', na.rm = T)
-library(dplyr)
+
 df %>%
   group_by(df$SJR.Best.Quartile) %>%
   summarise(articles = n())
