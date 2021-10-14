@@ -58,6 +58,8 @@ server <- function(input, output, session) {
     })
     
     output$table <- DT::renderDataTable(
+      if (is.null(outTable))
+        return(NULL),
         outTable(),
         options = list(
             language = list(url = "https://cdn.datatables.net/plug-ins/1.11.3/i18n/ru.json")
@@ -80,9 +82,8 @@ server <- function(input, output, session) {
       if (is.null(outTable))
         return(NULL)
         df <- outTable()
-        print(df)
         df %>%
-            dplyr::group_by(Квартиль) %>%
+            dplyr::group_by(df$`Квартиль`) %>%
             dplyr::summarise(articles = dplyr::n()) %>%
             `colnames<-`(c('Квартиль', 'Количество статей'))
         
