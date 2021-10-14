@@ -55,6 +55,15 @@ server <- function(input, output, session) {
           dplyr::arrange(desc(`Год`))
     })
     
+    output$years <- renderUI({
+      sliderInput(inputId = "take_years", 
+                  min = min(outTable()$`Год`, na.rm = T), 
+                  max = max(outTable()$`Год`, na.rm = T), 
+                  label = "Годы для учета", 
+                  value = c(1950, year(Sys.Date())), step = 1, sep = ""
+      )
+    })
+    
     output$table <- DT::renderDataTable(
         outTable(),
         options = list(
