@@ -70,8 +70,9 @@ server <- function(input, output, session) {
             geom_histogram(stat = 'count') +
             stat_count(aes(y=..count..,label=..count..),geom="text",vjust=1) +
             labs(title = paste('SCIMAGO JR ', min(df$`Год`, na.rm = T), '-', 
-                               max(df$`Год`, na.rm = T)), x='Квартиль', y='Количество статей',
-                 fill='Квартиль') + theme_void(base_size = 20)
+                               max(df$`Год`, na.rm = T)), 
+                 x='Квартиль', y='Количество статей',
+                 fill='Квартиль') + theme_minimal(base_size = 20)
     })
     output$count <- renderTable({
         df <- outTable()
