@@ -3,12 +3,13 @@ library(ggplot2)
 library(bibliometrix)
 library(DT)
 library(dplyr)
+library(lubridate)
 
 ui <- fluidPage(
     titlePanel("Подсчет количества статей в журналах различных квартилей SJR"),
     fluidRow(
         column(4,
-               fileInput("csvfile", 
+               fileInput("bibfile", 
                          "Выберите файл *.bib", 
                          buttonLabel = "Выбрать...", 
                                            placeholder = "",
@@ -26,6 +27,7 @@ ui <- fluidPage(
                plotOutput("plot")
                     ),
         column(6, 
+               uiOutput("years"),
                tableOutput("count")
                )
         ),
@@ -41,34 +43,26 @@ server <- function(input, output, session) {
     sjr$Title <- toupper(sjr$Title)
     
     outTable <- reactive({
-        inFile <- input$csvfile
-        
-        if (is.null(inFile))
-            return(NULL)
-        
+        req(input$bibfile)
+        inFile <- input$bibfile
         rec <- bibliometrix::convert2df(inFile$datapath, dbsource = "scopus", format = "bibtex")
         rownames(rec) <- NULL
-        df <- rec %>% 
+        rec %>% 
           dplyr::select(SO, AU, PY, DI, TI) %>%
           dplyr::left_join(y = sjr, by = c("SO"="Title")) %>%
           dplyr::select(PY,AU,TI,SO,DI,SJR.Best.Quartile) %>%
           `colnames<-`(c('Год','Авторы','Название','Журнал','DOI','Квартиль'))  %>%
           dplyr::arrange(desc(`Год`))
-        return(df)
     })
     
     output$table <- DT::renderDataTable(
-      if (is.null(outTable))
-        return(NULL),
         outTable(),
         options = list(
             language = list(url = "https://cdn.datatables.net/plug-ins/1.11.3/i18n/ru.json")
-        )
+        )    
         )
     
     output$plot <- renderPlot({
-      if (is.null(outTable))
-        return(NULL)
         df <- outTable()
         ggplot(df, aes(x=`Квартиль`, fill=`Квартиль`)) +
             geom_histogram(stat = 'count') +
@@ -78,6 +72,7 @@ server <- function(input, output, session) {
                  x='Квартиль', y='Количество статей',
                  fill='Квартиль') + theme_minimal(base_size = 20)
     })
+    
     output$count <- renderTable({
       if (is.null(outTable))
         return(NULL)
