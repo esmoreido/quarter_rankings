@@ -56,23 +56,31 @@ server <- function(input, output, session) {
     })
     
     output$years <- renderUI({
+      req(outTable())
       sliderInput(inputId = "take_years", 
-                  min = min(outTable()$`Год`, na.rm = T), 
-                  max = max(outTable()$`Год`, na.rm = T), 
+                  min = min(min(outTable()$`Год`, na.rm = T), year(Sys.Date()) - 5), 
+                  max = max(max(outTable()$`Год`, na.rm = T), year(Sys.Date())), 
                   label = "Годы для учета", 
-                  value = c(1950, year(Sys.Date())), step = 1, sep = ""
+                  value = c(min(outTable()$`Год`, na.rm = T), max(outTable()$`Год`, na.rm = T)), step = 1, sep = ""
       )
     })
     
+    filtered <- reactive({
+      req(outTable())
+      df <- outTable() %>%
+          dplyr::filter(between(`Год`,input$take_years[1],input$take_years[2]))
+        # dplyr::filter(`Год` %in% seq(from = input$take_years[1], to = input$take_years[2], by = 1))
+    })
+    
     output$table <- DT::renderDataTable(
-        outTable(),
+        filtered(),
         options = list(
             language = list(url = "https://cdn.datatables.net/plug-ins/1.11.3/i18n/ru.json")
         )    
         )
     
     output$plot <- renderPlot({
-        df <- outTable()
+        df <- filtered()
         ggplot(df, aes(x=`Квартиль`, fill=`Квартиль`)) +
             geom_histogram(stat = 'count') +
             stat_count(aes(y=..count..,label=..count..),geom="text",vjust=1) +
@@ -83,9 +91,8 @@ server <- function(input, output, session) {
     })
     
     output$count <- renderTable({
-      if (is.null(outTable))
-        return(NULL)
-        df <- outTable()
+        print(input$take_years)
+        df <- filtered()
         df %>%
             dplyr::group_by(df$`Квартиль`) %>%
             dplyr::summarise(articles = dplyr::n()) %>%
