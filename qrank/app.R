@@ -41,7 +41,7 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
     sjr <- read.csv(file = 'scimagojr 2022.csv', sep = ';', na.strings = '-')
-    sjr$Title <- toupper(sjr$Title)
+    # sjr$Title <- toupper(sjr$Title)
     sjr$EIssn <- gsub(pattern = ',.*', replacement = '', x = sjr$Issn)
     
     outTable <- reactive({
@@ -49,22 +49,35 @@ server <- function(input, output, session) {
         validate(need(tools::file_ext(input$bibfile$datapath) == c("bib"), 
                     "Пожалуйста, загрузите файл в формате *.bib"))
         inFile <- input$bibfile$datapath
-        print(inFile)
+        # inFile <- 'd:/YandexDisk/ИВПРАН/минобр/конкурсы/2024/заявка/публикации/соломатин/Scopus Solomatine ALL-v02.bib'
+        # print(inFile)
         rec <- bib2df(inFile)
-        rec$ISSN <- gsub(pattern = '-', replacement = '', x = rec$ISSN)
-        rec$EISSN <- gsub(pattern = '-', replacement = '', x = rec$EISSN)
-        rec$Quartile <- ''
-        for(i in 1:nrow(rec)){
-          print(i)
-          ss <- sjr %>%
-            filter(grepl(rec[i,]$ISSN, Issn, fixed = TRUE))
-          if(nrow(ss) == 0){
-            ss <- sjr %>%
-              filter(grepl(rec[i,]$EISSN, Issn, fixed = TRUE))
+        
+        if("ISSN" %in% names(rec)){
+          
+          rec$ISSN <- gsub(pattern = '-', replacement = '', x = rec$ISSN)
+          if("EISSN" %in% names(rec)){
+            rec$EISSN <- gsub(pattern = '-', replacement = '', x = rec$EISSN)
           }
           
-          print(ss$SJR.Best.Quartile)
-          rec[i,]$Quartile <- ss$SJR.Best.Quartile
+          rec$Quartile <- ''
+          for(i in 1:nrow(rec)){
+            # print(i)
+            ss <- sjr %>%
+              filter(grepl(rec[i,]$ISSN, Issn, fixed = TRUE))
+            if(nrow(ss) == 0){
+              ss <- sjr %>%
+                filter(grepl(rec[i,]$EISSN, Issn, fixed = TRUE))
+            }
+            
+            # print(ss$SJR.Best.Quartile)
+            rec[i,]$Quartile <- ss$SJR.Best.Quartile
+          }
+        }else{
+          rec <- rec %>%
+            dplyr::select(YEAR,AUTHOR,TITLE,JOURNAL,DOI) %>%
+            left_join(sjr, by = c('JOURNAL'='Title')) %>%
+            rename('Quartile' = 'SJR.Best.Quartile')
         }
         
         rec %>%
@@ -72,8 +85,7 @@ server <- function(input, output, session) {
           `colnames<-`(c('Год','Авторы','Название','Журнал','DOI','Квартиль'))  %>%
           dplyr::arrange(desc(`Год`))
     })
-    sjr$Issn
-    rec$ISSN
+    
     output$years <- renderUI({
       req(outTable())
       sliderInput(inputId = "take_years", 

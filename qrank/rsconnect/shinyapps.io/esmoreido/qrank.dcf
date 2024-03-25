@@ -1,0 +1,13 @@
+name: qrank
+title: qrank
+username: esmoreido
+account: esmoreido
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 11581822
+bundleId: 8415536
+url: https://esmoreido.shinyapps.io/qrank/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: savedrecs.bib|scimagojr 2020.csv
