@@ -1,6 +1,7 @@
+Sys.setlocale("LC_ALL","Russian")
 library(shiny)
 library(ggplot2)
-library(bibliometrix)
+library(bib2df)
 library(DT)
 library(dplyr)
 library(lubridate)
@@ -39,22 +40,40 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-    sjr <- read.csv(file = 'scimagojr 2020.csv', sep = ';', na.strings = '-')
+    sjr <- read.csv(file = 'scimagojr 2022.csv', sep = ';', na.strings = '-')
     sjr$Title <- toupper(sjr$Title)
+    sjr$EIssn <- gsub(pattern = ',.*', replacement = '', x = sjr$Issn)
     
     outTable <- reactive({
         req(input$bibfile)
-        inFile <- input$bibfile
-        rec <- bibliometrix::convert2df(inFile$datapath, dbsource = "scopus", format = "bibtex")
-        rownames(rec) <- NULL
-        rec %>% 
-          dplyr::select(SO, AU, PY, DI, TI) %>%
-          dplyr::left_join(y = sjr, by = c("SO"="Title")) %>%
-          dplyr::select(PY,AU,TI,SO,DI,SJR.Best.Quartile) %>%
+        validate(need(tools::file_ext(input$bibfile$datapath) == c("bib"), 
+                    "Пожалуйста, загрузите файл в формате *.bib"))
+        inFile <- input$bibfile$datapath
+        print(inFile)
+        rec <- bib2df(inFile)
+        rec$ISSN <- gsub(pattern = '-', replacement = '', x = rec$ISSN)
+        rec$EISSN <- gsub(pattern = '-', replacement = '', x = rec$EISSN)
+        rec$Quartile <- ''
+        for(i in 1:nrow(rec)){
+          print(i)
+          ss <- sjr %>%
+            filter(grepl(rec[i,]$ISSN, Issn, fixed = TRUE))
+          if(nrow(ss) == 0){
+            ss <- sjr %>%
+              filter(grepl(rec[i,]$EISSN, Issn, fixed = TRUE))
+          }
+          
+          print(ss$SJR.Best.Quartile)
+          rec[i,]$Quartile <- ss$SJR.Best.Quartile
+        }
+        
+        rec %>%
+          dplyr::select(YEAR,AUTHOR,TITLE,JOURNAL,DOI,Quartile) %>%
           `colnames<-`(c('Год','Авторы','Название','Журнал','DOI','Квартиль'))  %>%
           dplyr::arrange(desc(`Год`))
     })
-    
+    sjr$Issn
+    rec$ISSN
     output$years <- renderUI({
       req(outTable())
       sliderInput(inputId = "take_years", 
